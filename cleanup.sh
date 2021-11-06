@@ -8,4 +8,5 @@ YELLOW='\033[0;33m'
 echo -e "${GREEN}Killing containers if running, cleaning up...${NC}"
 docker rm -f bcnode
 docker rm -f gpuminer
+docker rm -f gpuminer_keepalive
 docker network rm waietng

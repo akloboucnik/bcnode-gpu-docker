@@ -28,7 +28,7 @@ nvidia-smi | head -3 | tail -1
 echo
 
 echo -e "${GREEN}Check the following output if Docker has access to one or more GPUs:${NC}"
-docker run --rm --gpus all nvidia/cuda:11.0-base-ubuntu18.04 nvidia-smi
+docker run --rm --runtime="nvidia" nvidia/cuda:11.0-base-ubuntu18.04 nvidia-smi
 
 . ./config
 
@@ -63,20 +63,25 @@ docker network create waietng
 
 echo -e "${GREEN}Firing up a container for LG's GPU miner...${NC}"
 docker run --restart=unless-stopped  --name gpuminer \
---gpus all \
+--runtime="nvidia" \
 -p 50052 -d \
 --network waietng \
 ${gpuminer_image} 2>&1
 
-echo -e "${GREEN}Starting bcnode container...${NC}"
-docker run -d --restart=unless-stopped --name bcnode \
--p 3000:3000 -p 16060:16060/tcp -p 16060:16060/udp -p 16061:16061/tcp -p 16061:16061/udp \
---memory-reservation="6900m" \
---env-file ./config \
---network waietng \
---mount source=db,target=/bc/_data \
-${bcnode_image} \
-start --rovers --rpc --ws --ui --node --scookie "${BC_SCOOKIE}" 2>&1
+echo -e "${GREEN}Starting gpuminer keepalive...${NC}"
+docker run --name gpuminer_keepalive -d --restart=unless-stopped \
+-v /var/run/docker.sock:/var/run/docker.sock --entrypoint /bin/sh \
+docker:latest -c 'echo "$(date -Iseconds) started gpuminer_keepalive"; while true; do sleep 3600; echo "$(date -Iseconds) restarting gpuminer...";docker restart gpuminer; done'
+
+# echo -e "${GREEN}Starting bcnode container...${NC}"
+# docker run -d --restart=unless-stopped --name bcnode \
+# -p 3000:3000 -p 16060:16060/tcp -p 16060:16060/udp -p 16061:16061/tcp -p 16061:16061/udp \
+# --memory-reservation="6900m" \
+# --env-file ./config \
+# --network waietng \
+# --mount source=db,target=/bc/_data \
+# ${bcnode_image} \
+# start --rovers --rpc --ws --ui --node --scookie "${BC_SCOOKIE}" 2>&1
 echo -e "${GREEN}Done.${NC}"
 echo
 docker ps
