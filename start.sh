@@ -61,27 +61,36 @@ fi
 echo -e "${GREEN}Creating a comfy Docker network for the containers...${NC}"
 docker network create waietng
 
+if [ ! -z ${nobcnode} ]; then
+    network="--network waietng"
+else
+    network=""
+fi
 echo -e "${GREEN}Firing up a container for LG's GPU miner...${NC}"
 docker run --restart=unless-stopped  --name gpuminer \
 --runtime="nvidia" \
 -p 50052 -d \
---network waietng \
+$network \
 ${gpuminer_image} 2>&1
 
 echo -e "${GREEN}Starting gpuminer keepalive...${NC}"
 docker run --name gpuminer_keepalive -d --restart=unless-stopped \
--v /var/run/docker.sock:/var/run/docker.sock --entrypoint /bin/sh \
+-v /var/run/docker.sock:/var/run/docker.sock $network --entrypoint /bin/sh \
 docker:latest -c 'echo "$(date -Iseconds) started gpuminer_keepalive"; while true; do sleep 3600; echo "$(date -Iseconds) restarting gpuminer...";docker restart gpuminer; done'
 
-# echo -e "${GREEN}Starting bcnode container...${NC}"
-# docker run -d --restart=unless-stopped --name bcnode \
-# -p 3000:3000 -p 16060:16060/tcp -p 16060:16060/udp -p 16061:16061/tcp -p 16061:16061/udp \
-# --memory-reservation="6900m" \
-# --env-file ./config \
-# --network waietng \
-# --mount source=db,target=/bc/_data \
-# ${bcnode_image} \
-# start --rovers --rpc --ws --ui --node --scookie "${BC_SCOOKIE}" 2>&1
+# this is used whe running from clone
+if [ ! -z ${nobcnode} ]; then
+    echo -e "${GREEN}Starting bcnode container...${NC}"
+    docker run -d --restart=unless-stopped --name bcnode \
+        -p 3000:3000 -p 16060:16060/tcp -p 16060:16060/udp -p 16061:16061/tcp -p 16061:16061/udp \
+        --memory-reservation="6900m" \
+        --env-file ./config \
+        $network \
+        --mount source=db,target=/bc/_data \
+        ${bcnode_image} \
+        start --rovers --rpc --ws --ui --node --scookie "${BC_SCOOKIE}" 2>&1
+fi
+
 echo -e "${GREEN}Done.${NC}"
 echo
 docker ps
