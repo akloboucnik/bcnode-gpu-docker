@@ -28,7 +28,7 @@ nvidia-smi | head -3 | tail -1
 echo
 
 echo -e "${GREEN}Check the following output if Docker has access to one or more GPUs:${NC}"
-docker run --rm --runtime="nvidia" nvidia/cuda:11.0-base-ubuntu18.04 nvidia-smi
+docker run --rm --gpus all nvidia/cuda:11.0-base-ubuntu18.04 nvidia-smi
 
 . ./config
 
@@ -68,7 +68,7 @@ else
 fi
 echo -e "${GREEN}Firing up a container for LG's GPU miner...${NC}"
 docker run --restart=unless-stopped  --name gpuminer \
---runtime="nvidia" \
+--gpus all \
 -p 50052 -d \
 $network \
 ${gpuminer_image} 2>&1
